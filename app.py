@@ -6,7 +6,13 @@ from datetime import datetime
 import logging
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend communication
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["https://options-monitor-home.onrender.com"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
