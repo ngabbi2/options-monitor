@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options Flow Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: end;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        input {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .stocks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stock-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .stock-card.flagged {
+            border: 3px solid #ff4757;
+            background: linear-gradient(135deg, #fff 0%, #ffebee 100%);
+        }
+
+        .stock-card.flagged::before {
+            content: '🚩 FLAGGED';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff4757;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .stock-card.error {
+            border: 2px solid #ffa502;
+            opacity: 0.7;
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .stock-symbol {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stock-price {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .ratio-badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .ratio-high {
+            background: #ff4757;
+            color: white;
+        }
+
+        .ratio-medium {
+            background: #ffa502;
+            color: white;
+        }
+
+        .ratio-low {
+            background: #2ed573;
+            color: white;
+        }
+
+        .stock-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .metric {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .last-updated {
+            text-align: center;
+            color: white;
+            font-size: 0.9em;
+            margin-top: 20px;
+        }
+
+        .error {
+            background: #ff4757;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .progress {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Options Flow Monitor</h1>
+            const API_URL = 'https://options-monitor.onrender.com'
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="symbols">Stock Symbols (comma-separated)</label>
+                <input type="text" id="symbols" value="AAPL,TSLA,NVDA,MSFT,AMZN,GOOGL,META,AMD,SPY,QQQ" placeholder="e.g., AAPL,TSLA,NVDA">
+            </div>
+            <div class="control-group">
+                <label for="callVolThreshold">Call Volume Threshold</label>
+                <input type="number" id="callVolThreshold" value="5000" min="0" step="1000">
+            </div>
+            <div class="control-group">
+                <label for="ratioThreshold">Call/Put Ratio Threshold</label>
+                <input type="number" id="ratioThreshold" value="2.0" min="0" step="0.1">
+            </div>
+            <div class="control-group">
+                <button id="scanBtn" onclick="scanMarket()">🔍 Scan Market</button>
+            </div>
+        </div>
+
+        <div id="error" style="display:none;" class="error"></div>
+
+        <div id="progress" style="display:none;" class="progress">
+            <div id="progressText">Scanning stocks...</div>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 0%;">0%</div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalScanned">0</div>
+                <div class="stat-label">Stocks Scanned</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="flaggedCount">0</div>
+                <div class="stat-label">Flagged Stocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgRatio">0.00</div>
+                <div class="stat-label">Avg C/P Ratio</div>
+            </div>
+        </div>
+
+        <div id="stocksGrid" class="stocks-grid"></div>
+
+        <div class="last-updated" id="lastUpdated"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let stockData = [];
+
+        async function scanMarket() {
+            const symbolsInput = document.getElementById('symbols').value;
+            const symbols = symbolsInput.split(',').map(s => s.trim()).filter(s => s);
+            const callVolThreshold = parseInt(document.getElementById('callVolThreshold').value);
+            const ratioThreshold = parseFloat(document.getElementById('ratioThreshold').value);
+            
+            if (symbols.length === 0) {
+                showError('Please enter at least one stock symbol');
+                return;
+            }
+
+            hideError();
+            showProgress(true);
+            document.getElementById('scanBtn').disabled = true;
+            stockData = [];
+
+            try {
+                const response = await fetch(`${API_URL}/api/scan-multiple`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        symbols: symbols,
+                        callVolThreshold: callVolThreshold,
+                        ratioThreshold: ratioThreshold
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                stockData = data.results;
+
+                showProgress(false);
+                displayResults();
+                updateStats(data.summary);
+                updateTimestamp();
+
+            } catch (error) {
+                showProgress(false);
+                showError(`Error connecting to backend: ${error.message}. Make sure the Flask server is running on port 5000.`);
+                console.error('Error:', error);
+            } finally {
+                document.getElementById('scanBtn').disabled = false;
+            }
+        }
+
+        function displayResults() {
+            const grid = document.getElementById('stocksGrid');
+            grid.innerHTML = '';
+
+            // Sort flagged stocks first
+            const sortedData = [...stockData].sort((a, b) => {
+                if (a.flagged && !b.flagged) return -1;
+                if (!a.flagged && b.flagged) return 1;
+                if (a.error && !b.error) return 1;
+                if (!a.error && b.error) return -1;
+                return (b.ratio || 0) - (a.ratio || 0);
+            });
+
+            sortedData.forEach(stock => {
+                const card = createStockCard(stock);
+                grid.appendChild(card);
+            });
+        }
+
+        function createStockCard(stock) {
+            const card = document.createElement('div');
+            
+            if (stock.error) {
+                card.className = 'stock-card error';
+                card.innerHTML = `
+                    <div class="stock-header">
+                        <div class="stock-symbol">${stock.symbol}</div>
+                    </div>
+                    <div style="color: #ffa502; text-align: center; padding: 20px;">
+                        ⚠️ ${stock.error}
+                    </div>
+                `;
+                return card;
+            }
+
+            card.className = `stock-card ${stock.flagged ? 'flagged' : ''}`;
+
+            let ratioClass = 'ratio-low';
+            if (stock.ratio >= 2.5) ratioClass = 'ratio-high';
+            else if (stock.ratio >= 1.5) ratioClass = 'ratio-medium';
+
+            card.innerHTML = `
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-symbol">${stock.symbol}</div>
+                        <div class="stock-price">$${stock.currentPrice.toFixed(2)}</div>
+                    </div>
+                    <div class="ratio-badge ${ratioClass}">${stock.ratio}</div>
+                </div>
+                <div class="stock-metrics">
+                    <div class="metric">
+                        <div class="metric-label">Call Volume</div>
+                        <div class="metric-value">${stock.callVolume.toLocaleString()}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Put Volume</div>
+                        <div class="metric-value">${stock.putVolume.toLocaleString()}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Call OI</div>
+                        <div class="metric-value">${stock.callOpenInterest.toLocaleString()}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Implied Vol</div>
+                        <div class="metric-value">${(stock.impliedVol * 100).toFixed(2)}%</div>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function updateStats(summary) {
+            document.getElementById('totalScanned').textContent = summary.totalScanned;
+            document.getElementById('flaggedCount').textContent = summary.flaggedCount;
+            document.getElementById('avgRatio').textContent = summary.avgRatio.toFixed(2);
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('lastUpdated').textContent = 
+                `Last updated: ${now.toLocaleString()}`;
+        }
+
+        function showProgress(show) {
+            document.getElementById('progress').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        // Test backend connection on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_URL}/api/health`);
+                if (response.ok) {
+                    console.log('✅ Connected to backend successfully');
+                }
+            } catch (error) {
+                showError('⚠️ Backend server not running. Please start the Flask server first.');
+            }
+        });
+    </script>
+</body>
+</html>
