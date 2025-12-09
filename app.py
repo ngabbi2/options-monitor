@@ -25,33 +25,72 @@ class OptionsDataFetcher:
     def get_options_data(symbol):
         """Fetch options data for a symbol."""
         try:
-            ticker = yf.Ticker(symbol)
+            import time
+            import requests
             
-            # Get stock price
-            stock_info = ticker.history(period='1d')
-            current_price = stock_info['Close'].iloc[-1] if not stock_info.empty else 0
+            # Create session with headers to avoid blocking
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            })
+            
+            # Create ticker with custom session
+            ticker = yf.Ticker(symbol, session=session)
+            
+            # Small delay to avoid rate limiting
+            time.sleep(0.5)
+            
+            # Get stock price with error handling
+            try:
+                stock_info = ticker.history(period='1d')
+                if stock_info.empty:
+                    # Try alternative method
+                    info = ticker.info
+                    current_price = float(info.get('currentPrice', info.get('regularMarketPrice', 0)))
+                else:
+                    current_price = float(stock_info['Close'].iloc[-1])
+            except Exception as e:
+                logger.warning(f"Could not get price for {symbol}: {e}")
+                current_price = 0
             
             # Get all expiration dates
             expirations = ticker.options
-            if not expirations:
+            if not expirations or len(expirations) == 0:
+                logger.warning(f"No options available for {symbol}")
                 return None
             
-            # Focus on near-term expirations (next 30-45 days)
-            near_expirations = expirations[:4]
+            # Focus on near-term expirations
+            near_expirations = expirations[:min(4, len(expirations))]
             
             all_calls = []
             all_puts = []
             
             for exp_date in near_expirations:
-                opt_chain = ticker.option_chain(exp_date)
-                
-                calls = opt_chain.calls.copy()
-                puts = opt_chain.puts.copy()
-                calls['expiration'] = exp_date
-                puts['expiration'] = exp_date
-                
-                all_calls.append(calls)
-                all_puts.append(puts)
+                try:
+                    opt_chain = ticker.option_chain(exp_date)
+                    
+                    calls = opt_chain.calls.copy()
+                    puts = opt_chain.puts.copy()
+                    
+                    if calls.empty or puts.empty:
+                        continue
+                        
+                    calls['expiration'] = exp_date
+                    puts['expiration'] = exp_date
+                    
+                    all_calls.append(calls)
+                    all_puts.append(puts)
+                    
+                    # Small delay between requests
+                    time.sleep(0.3)
+                    
+                except Exception as e:
+                    logger.warning(f"Error fetching options chain for {symbol} exp {exp_date}: {e}")
+                    continue
+            
+            if not all_calls or not all_puts:
+                logger.warning(f"No valid options data for {symbol}")
+                return None
             
             calls_df = pd.concat(all_calls, ignore_index=True)
             puts_df = pd.concat(all_puts, ignore_index=True)
@@ -59,12 +98,14 @@ class OptionsDataFetcher:
             return {
                 'calls': calls_df,
                 'puts': puts_df,
-                'current_price': float(current_price)
+                'current_price': current_price
             }
             
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {e}")
+            logger.error(f"Error fetching data for {symbol}: {str(e)}")
             return None
+    
+    # ... keep the rest of the analyze_options method the same
     
     @staticmethod
     def analyze_options(symbol, data):
