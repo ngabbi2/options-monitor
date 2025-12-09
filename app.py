@@ -250,7 +250,13 @@ def top_strikes(symbol):
     except Exception as e:
         logger.error(f"Error in top_strikes: {e}")
         return jsonify({'error': str(e)}), 500
-
+# For production deployment
+if __name__ != '__main__':
+    # Gunicorn config
+    import logging
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
 if __name__ == '__main__':
     print("=" * 60)
     print("Options Flow Monitor Backend Server")
